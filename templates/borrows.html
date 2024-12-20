@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}Borrows - Library System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Borrows Management</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBorrowModal">
+            <i class='bx bx-plus'></i> New Borrow
+        </button>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="searchForm" class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" id="searchQuery" placeholder="Search...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="borrowed">Borrowed</option>
+                        <option value="returned">Returned</option>
+                        <option value="overdue">Overdue</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">Date Range</span>
+                        <input type="date" class="form-control" id="startDate">
+                        <input type="date" class="form-control" id="endDate">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Borrows Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Book Title</th>
+                            <th>Student</th>
+                            <th>Borrow Date</th>
+                            <th>Due Date</th>
+                            <th>Return Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for borrow in borrows %}
+                        <tr>
+                            <td>{{ borrow.book.title }}</td>
+                            <td>{{ borrow.student.fullname }}</td>
+                            <td>{{ borrow.borrow_date }}</td>
+                            <td>{{ borrow.due_date }}</td>
+                            <td>{{ borrow.return_date or '-' }}</td>
+                            <td>
+                                {% if borrow.is_returned %}
+                                <span class="badge bg-success">Returned</span>
+                                {% elif borrow.is_overdue %}
+                                <span class="badge bg-danger">Overdue</span>
+                                {% else %}
+                                <span class="badge bg-warning">Borrowed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="viewBorrow({{ borrow.id }})">
+                                    <i class='bx bx-show'></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="editBorrow({{ borrow.id }})">
+                                    <i class='bx bx-edit'></i> Edit
+                                </button>
+                                {% if not borrow.is_returned %}
+                                <button class="btn btn-sm btn-success" onclick="returnBook({{ borrow.id }})">
+                                    <i class='bx bx-check'></i> Return
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-sm btn-danger" onclick="deleteBorrow({{ borrow.id }})">
+                                    <i class='bx bx-trash'></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item {% if not prev_page %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ prev_page }}" tabindex="-1">Previous</a>
+                    </li>
+                    <li class="page-item active">
+                        <span class="page-link">{{ current_page }}</span>
+                    </li>
+                    <li class="page-item {% if not next_page %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ next_page }}">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- Add Borrow Modal -->
+<div class="modal fade" id="addBorrowModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">New Borrow</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addBorrowForm">
+                    <div class="mb-3">
+                        <label for="student_id" class="form-label">Student</label>
+                        <select class="form-select" id="student_id" name="student_id" required>
+                            <option value="">Select Student</option>
+                            {% for student in students %}
+                            <option value="{{ student.id }}">{{ student.student_id }} - {{ student.fullname }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="book_id" class="form-label">Book</label>
+                        <select class="form-select" id="book_id" name="book_id" required>
+                            <option value="">Select Book</option>
+                            {% for book in available_books %}
+                            <option value="{{ book.id }}">{{ book.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="due_date" class="form-label">Due Date</label>
+                        <input type="date" class="form-control" id="due_date" name="due_date" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="submitAddBorrowForm()">Add Borrow</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function viewBorrow(id) {
+    // TODO: Implement view borrow details
+    alert('View borrow details - Coming soon');
+}
+
+function editBorrow(id) {
+    // Get borrow data and populate form
+    fetch(`/api/borrows/${id}`)
+        .then(response => response.json())
+        .then(borrow => {
+            // Populate form fields
+            document.getElementById('student_id').value = borrow.student_id;
+            document.getElementById('book_id').value = borrow.book_id;
+            document.getElementById('due_date').value = borrow.due_date.split('T')[0];
+
+            // Change modal title and button
+            document.querySelector('#addBorrowModal .modal-title').textContent = 'Edit Borrow';
+            document.querySelector('#addBorrowModal .modal-footer .btn-primary').textContent = 'Save Changes';
+            document.querySelector('#addBorrowModal .modal-footer .btn-primary').onclick = () => submitEditBorrowForm(id);
+
+            // Show modal
+            new bootstrap.Modal(document.getElementById('addBorrowModal')).show();
+        });
+}
+
+function returnBook(id) {
+    if (confirm('Confirm return of this book?')) {
+        fetch(`/api/borrows/${id}/return`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                response.json().then(data => {
+                    alert(data.detail || 'Error returning book');
+                });
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+
+function submitEditBorrowForm(id) {
+    const form = document.getElementById('addBorrowForm');
+    const formData = new FormData(form);
+    
+    fetch(`/api/borrows/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(Object.fromEntries(formData))
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            response.json().then(data => {
+                alert(data.detail || 'Error updating borrow');
+            });
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function submitAddBorrowForm() {
+    const form = document.getElementById('addBorrowForm');
+    const formData = new FormData(form);
+    
+    fetch('/api/borrows/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(Object.fromEntries(formData))
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            response.json().then(data => {
+                alert(data.detail || 'Error adding borrow');
+            });
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function deleteBorrow(id) {
+    if (confirm('Confirm delete of this borrow?')) {
+        fetch(`/api/borrows/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                response.json().then(data => {
+                    alert(data.detail || 'Error deleting borrow');
+                });
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+
+// Reset form when modal is closed
+document.getElementById('addBorrowModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('addBorrowForm').reset();
+    document.querySelector('#addBorrowModal .modal-title').textContent = 'New Borrow';
+    document.querySelector('#addBorrowModal .modal-footer .btn-primary').textContent = 'Add Borrow';
+    document.querySelector('#addBorrowModal .modal-footer .btn-primary').onclick = submitAddBorrowForm;
+});
+
+// Set minimum date for due date to tomorrow
+document.addEventListener('DOMContentLoaded', function() {
+    const dueDateInput = document.getElementById('due_date');
+    if (dueDateInput) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        dueDateInput.min = tomorrow.toISOString().split('T')[0];
+    }
+});
+</script>
+{% endblock %}

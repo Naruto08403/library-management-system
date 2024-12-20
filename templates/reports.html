@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Library System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Reports</h1>
+        <div>
+            <button class="btn btn-success" onclick="exportReport()">
+                <i class='bx bx-export'></i> Export Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Report Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="reportForm" class="row g-3">
+                <div class="col-md-3">
+                    <label for="reportType" class="form-label">Report Type</label>
+                    <select class="form-select" id="reportType" name="reportType">
+                        <option value="borrows">Borrow History</option>
+                        <option value="overdue">Overdue Books</option>
+                        <option value="popular">Popular Books</option>
+                        <option value="students">Student Activity</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Date Range</label>
+                    <div class="input-group">
+                        <input type="date" class="form-control" id="startDate" name="startDate">
+                        <span class="input-group-text">to</span>
+                        <input type="date" class="form-control" id="endDate" name="endDate">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Content -->
+    <div class="row">
+        <!-- Summary Cards -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Borrows</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_borrows }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class='bx bx-book-bookmark bx-lg text-gray-300'></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Active Borrows</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.active_borrows }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class='bx bx-book-open bx-lg text-gray-300'></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Overdue Books</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.overdue_books }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class='bx bx-time-five bx-lg text-gray-300'></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Active Students</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.active_students }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class='bx bx-user-check bx-lg text-gray-300'></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <!-- Borrow Trends Chart -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Borrow Trends</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="borrowTrendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Popular Books Chart -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Popular Books</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie">
+                        <canvas id="popularBooksChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Detailed Report</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="reportTable">
+                    <thead>
+                        <tr>
+                            {% for header in report_headers %}
+                            <th>{{ header }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report_data %}
+                        <tr>
+                            {% for cell in row %}
+                            <td>{{ cell }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize charts with data from the server
+    initializeBorrowTrendsChart();
+    initializePopularBooksChart();
+
+    // Handle report form submission
+    const reportForm = document.getElementById('reportForm');
+    if (reportForm) {
+        reportForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            generateReport();
+        });
+    }
+});
+
+function initializeBorrowTrendsChart() {
+    const ctx = document.getElementById('borrowTrendsChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ borrow_trends.labels | tojson }},
+                datasets: [{
+                    label: 'Borrows',
+                    data: {{ borrow_trends.data | tojson }},
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+}
+
+function initializePopularBooksChart() {
+    const ctx = document.getElementById('popularBooksChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ popular_books.labels | tojson }},
+                datasets: [{
+                    data: {{ popular_books.data | tojson }},
+                    backgroundColor: [
+                        'rgb(255, 99, 132)',
+                        'rgb(54, 162, 235)',
+                        'rgb(255, 205, 86)',
+                        'rgb(75, 192, 192)',
+                        'rgb(153, 102, 255)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+}
+
+function generateReport() {
+    const formData = new FormData(document.getElementById('reportForm'));
+    const params = new URLSearchParams(formData);
+    
+    window.location.href = `/reports?${params.toString()}`;
+}
+
+function exportReport() {
+    const formData = new FormData(document.getElementById('reportForm'));
+    const params = new URLSearchParams(formData);
+    
+    window.location.href = `/reports/export?${params.toString()}`;
+}
+</script>
+{% endblock %}

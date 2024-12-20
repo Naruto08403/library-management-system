@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Students - Library System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Students Management</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+            <i class='bx bx-plus'></i> Add New Student
+        </button>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="searchForm" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="searchQuery" placeholder="Search students...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="departmentFilter">
+                        <option value="">All Departments</option>
+                        {% for department in departments %}
+                        <option value="{{ department.value }}">{{ department.value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Students Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Books Borrowed</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr>
+                            <td>{{ student.student_id }}</td>
+                            <td>{{ student.fullname }}</td>
+                            <td>{{ student.department }}</td>
+                            <td>{{ student.email }}</td>
+                            <td>
+                                {% if student.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ student.borrowed_books_count }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="viewStudent({{ student.id }})">
+                                    <i class='bx bx-show'></i>
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="editStudent({{ student.id }})">
+                                    <i class='bx bx-edit'></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteStudent({{ student.id }})">
+                                    <i class='bx bx-trash'></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item {% if not prev_page %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ prev_page }}" tabindex="-1">Previous</a>
+                    </li>
+                    <li class="page-item active">
+                        <span class="page-link">{{ current_page }}</span>
+                    </li>
+                    <li class="page-item {% if not next_page %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ next_page }}">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- Add Student Modal -->
+<div class="modal fade" id="addStudentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Student</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addStudentForm">
+                    <div class="mb-3">
+                        <label for="student_id" class="form-label">Student ID</label>
+                        <input type="text" class="form-control" id="student_id" name="student_id" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="fullname" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="fullname" name="fullname" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="department" class="form-label">Department</label>
+                        <select class="form-select" id="department" name="department" required>
+                            {% for department in departments %}
+                            <option value="{{ department.value }}">{{ department.value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="phone" name="phone">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="submitAddStudentForm()">Add Student</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function viewStudent(id) {
+    // TODO: Implement view student details
+    alert('View student details - Coming soon');
+}
+
+function editStudent(id) {
+    // Get student data and populate form
+    fetch(`/api/students/${id}`)
+        .then(response => response.json())
+        .then(student => {
+            // Populate form fields
+            document.getElementById('student_id').value = student.student_id;
+            document.getElementById('fullname').value = student.fullname;
+            document.getElementById('email').value = student.email;
+            document.getElementById('department').value = student.department;
+            document.getElementById('phone').value = student.phone || '';
+
+            // Change modal title and button
+            document.querySelector('#addStudentModal .modal-title').textContent = 'Edit Student';
+            document.querySelector('#addStudentModal .modal-footer .btn-primary').textContent = 'Save Changes';
+            document.querySelector('#addStudentModal .modal-footer .btn-primary').onclick = () => submitEditStudentForm(id);
+
+            // Show modal
+            new bootstrap.Modal(document.getElementById('addStudentModal')).show();
+        });
+}
+
+function deleteStudent(id) {
+    if (confirm('Are you sure you want to delete this student?')) {
+        fetch(`/api/students/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                response.json().then(data => {
+                    alert(data.detail || 'Error deleting student');
+                });
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+
+function submitEditStudentForm(id) {
+    const form = document.getElementById('addStudentForm');
+    const formData = new FormData(form);
+    
+    fetch(`/api/students/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(Object.fromEntries(formData))
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            response.json().then(data => {
+                alert(data.detail || 'Error updating student');
+            });
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function submitAddStudentForm() {
+    const form = document.getElementById('addStudentForm');
+    const formData = new FormData(form);
+    
+    fetch('/api/students/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(Object.fromEntries(formData))
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            response.json().then(data => {
+                alert(data.detail || 'Error adding student');
+            });
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// Reset form when modal is closed
+document.getElementById('addStudentModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('addStudentForm').reset();
+    document.querySelector('#addStudentModal .modal-title').textContent = 'Add New Student';
+    document.querySelector('#addStudentModal .modal-footer .btn-primary').textContent = 'Add Student';
+    document.querySelector('#addStudentModal .modal-footer .btn-primary').onclick = submitAddStudentForm;
+});
+</script>
+{% endblock %}

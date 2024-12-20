@@ -1201,104 +1201,6 @@ async def get_reports(
         "recent_borrows": recent_borrows
     }
 
-@app.get("/reports", response_class=HTMLResponse)
-async def reports_page(
-    request: Request,
-    db: Session = Depends(database.get_db),
-    current_admin: models.Admin = Depends(get_current_admin)
-):
-    if not current_admin:
-        return RedirectResponse(url="/login")
-
-    # Get basic statistics
-    total_students = db.query(models.Student).count()
-    total_books = db.query(models.Book).count()
-    total_borrows = db.query(models.BorrowRecord).count()
-    active_borrows = db.query(models.BorrowRecord).filter(
-        models.BorrowRecord.return_date == None
-    ).count()
-    overdue_borrows = db.query(models.BorrowRecord).filter(
-        models.BorrowRecord.return_date == None,
-        models.BorrowRecord.due_date < datetime.utcnow()
-    ).count()
-
-    # Get borrow trends for the last 7 days
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    trends = db.query(
-        func.date(models.BorrowRecord.borrow_date).label('date'),
-        func.count(models.BorrowRecord.id).label('count')
-    ).filter(
-        models.BorrowRecord.borrow_date >= seven_days_ago
-    ).group_by(
-        func.date(models.BorrowRecord.borrow_date)
-    ).order_by(
-        func.date(models.BorrowRecord.borrow_date)
-    ).all()
-
-    borrow_trends = {
-        "labels": [],
-        "data": []
-    }
-
-    # Fill in missing dates with zero counts
-    current_date = seven_days_ago.date()
-    end_date = datetime.utcnow().date()
-    trend_dict = {trend[0]: trend[1] for trend in trends}
-
-    while current_date <= end_date:
-        borrow_trends["labels"].append(current_date.strftime("%Y-%m-%d"))
-        borrow_trends["data"].append(trend_dict.get(current_date, 0))
-        current_date += timedelta(days=1)
-
-    # Get popular books
-    popular_books = db.query(
-        models.Book,
-        func.count(models.BorrowRecord.id).label('borrow_count')
-    ).join(models.BorrowRecord).group_by(models.Book.id).order_by(
-        desc('borrow_count')
-    ).limit(5).all()
-
-    # Get department statistics
-    dept_stats = db.query(
-        models.Student.department,
-        func.count(models.BorrowRecord.id).label('borrow_count')
-    ).join(models.BorrowRecord).group_by(
-        models.Student.department
-    ).all()
-
-    department_stats = {
-        "labels": [str(dept[0].value) for dept in dept_stats],
-        "data": [dept[1] for dept in dept_stats]
-    }
-
-    # Get category statistics
-    cat_stats = db.query(
-        models.Book.category,
-        func.count(models.BorrowRecord.id).label('borrow_count')
-    ).join(models.BorrowRecord).group_by(
-        models.Book.category
-    ).all()
-
-    category_stats = {
-        "labels": [str(cat[0].value) for cat in cat_stats],
-        "data": [cat[1] for cat in cat_stats]
-    }
-
-    return templates.TemplateResponse(
-        "reports.html",
-        {
-            "request": request,
-            "total_students": total_students,
-            "total_books": total_books,
-            "total_borrows": total_borrows,
-            "active_borrows": active_borrows,
-            "overdue_borrows": overdue_borrows,
-            "borrow_trends": borrow_trends,
-            "popular_books": popular_books,
-            "department_stats": department_stats,
-            "category_stats": category_stats
-        }
-    )
 
 # Middleware to handle authentication redirects
 @app.middleware("http")
@@ -1545,7 +1447,7 @@ async def reports_page(
         "data": []
     }
     for trend in trends_query.all():
-        borrow_trends["labels"].append(trend.date.strftime("%Y-%m-%d"))
+        borrow_trends["labels"].append(datetime.strptime(trend.date, "%Y-%m-%d").strftime("%Y-%m-%d"))
         borrow_trends["data"].append(trend.count)
         
     # Get popular books
